@@ -1,25 +1,42 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const https = require('https')
+"use strict";
 
-const ip = "0.0.0.0"
-const port = 3000
-const home_assistant_url = 'https://home.jaimie.me:65321'
+const express = require('express');
+const https = require('https');
+const app = express();
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+require('dotenv').config();
 
-const app = express()
+const listen_ip_address = process.env.LISTEN_IP || '0.0.0.0';
+const listen_port = process.env.LISTEN_PORT || 3000;
+const home_assistant_url = process.env.HOME_ASSISTANT_URL || 'http://localhost:8123';
 
-app.use(bodyParser.urlencoded({ extended: false }))
+if (process.env.ALLOW_INSECURE_HTTPS) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 app.get('/api/torque', (request, response) => {
-  const { url, headers } = request;
-  
-  console.log({url, headers})
+  const { url } = request;
 
+  if(!request.query) {
+    console.log('Invalid request: Query string missing!');
+
+    return response.status(400)
+                   .send();
+  }
+
+  if (!request.query.eml) {
+    console.log('Invalid request: Email address missing in query string!');
+    
+    return response.status(400)
+                   .send();
+  }
+  
   https.get(`${home_assistant_url}${url}`);
 
-  response.send('Ok!')
+  response.status(200)
+          .send('OK!');
 })
 
-app.listen(port, ip, () => console.log(`Torque Proxy API listening on port ${port}!`))
+app.listen(listen_port, listen_ip_address, () => {
+  console.log(`Torque Proxy API listening on http://${listen_ip_address}:${listen_port}!`);
+});
